@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPERAND_H_
-#define LIBSPIRV_OPERAND_H_
+#ifndef SOURCE_OPERAND_H_
+#define SOURCE_OPERAND_H_
 
-#include <deque>
 #include <functional>
+#include <vector>
 
+#include "source/table.h"
 #include "spirv-tools/libspirv.h"
-#include "table.h"
 
 // A sequence of operand types.
 //
@@ -131,6 +131,9 @@ spv_operand_pattern_t spvAlternatePatternFollowingImmediate(
 // Is the operand an ID?
 bool spvIsIdType(spv_operand_type_t type);
 
+// Is the operand an input ID?
+bool spvIsInIdType(spv_operand_type_t type);
+
 // Takes the opcode of an instruction and returns
 // a function object that will return true if the index
 // of the operand can be forward declared. This function will
@@ -138,4 +141,4 @@ bool spvIsIdType(spv_operand_type_t type);
 std::function<bool(unsigned)> spvOperandCanBeForwardDeclaredFunction(
     SpvOp opcode);
 
-#endif  // LIBSPIRV_OPERAND_H_
+#endif  // SOURCE_OPERAND_H_

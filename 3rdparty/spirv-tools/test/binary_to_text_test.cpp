@@ -12,30 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "unit_spirv.h"
-
 #include <sstream>
+#include <string>
+#include <tuple>
+#include <vector>
 
 #include "gmock/gmock.h"
-
 #include "source/spirv_constant.h"
-#include "test_fixture.h"
+#include "test/test_fixture.h"
+#include "test/unit_spirv.h"
 
+namespace spvtools {
 namespace {
 
 using spvtest::AutoText;
 using spvtest::ScopedContext;
 using spvtest::TextToBinaryTest;
-using std::get;
-using std::tuple;
 using ::testing::Combine;
 using ::testing::Eq;
 using ::testing::HasSubstr;
 
 class BinaryToText : public ::testing::Test {
  public:
-  BinaryToText() : context(spvContextCreate(SPV_ENV_UNIVERSAL_1_0)) {}
-  ~BinaryToText() { spvContextDestroy(context); }
+  BinaryToText()
+      : context(spvContextCreate(SPV_ENV_UNIVERSAL_1_0)), binary(nullptr) {}
+  ~BinaryToText() {
+    spvBinaryDestroy(binary);
+    spvContextDestroy(context);
+  }
 
   virtual void SetUp() {
     const char* textStr = R"(
@@ -63,17 +67,20 @@ class BinaryToText : public ::testing::Test {
     spv_diagnostic diagnostic = nullptr;
     spv_result_t error =
         spvTextToBinary(context, text.str, text.length, &binary, &diagnostic);
-    if (error) {
-      spvDiagnosticPrint(diagnostic);
-      spvDiagnosticDestroy(diagnostic);
-      ASSERT_EQ(SPV_SUCCESS, error);
-    }
+    spvDiagnosticPrint(diagnostic);
+    spvDiagnosticDestroy(diagnostic);
+    ASSERT_EQ(SPV_SUCCESS, error);
   }
 
-  virtual void TearDown() { spvBinaryDestroy(binary); }
+  virtual void TearDown() {
+    spvBinaryDestroy(binary);
+    binary = nullptr;
+  }
 
   // Compiles the given assembly text, and saves it into 'binary'.
   void CompileSuccessfully(std::string text) {
+    spvBinaryDestroy(binary);
+    binary = nullptr;
     spv_diagnostic diagnostic = nullptr;
     EXPECT_EQ(SPV_SUCCESS, spvTextToBinary(context, text.c_str(), text.size(),
                                            &binary, &diagnostic));
@@ -164,7 +171,7 @@ TEST_P(BinaryToTextFail, EncodeSuccessfullyDecodeFailed) {
               Eq(GetParam().expected_error_message));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     InvalidIds, BinaryToTextFail,
     ::testing::ValuesIn(std::vector<FailedDecodeCase>{
         {"", spvtest::MakeInstruction(SpvOpTypeVoid, {0}),
@@ -189,9 +196,9 @@ INSTANTIATE_TEST_CASE_P(
          "%2 = OpTypeVector %1 4",
          spvtest::MakeInstruction(SpvOpConstant, {2, 3, 999}),
          "Type Id 2 is not a scalar numeric type"},
-    }), );
+    }));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     InvalidIdsCheckedDuringLiteralCaseParsing, BinaryToTextFail,
     ::testing::ValuesIn(std::vector<FailedDecodeCase>{
         {"", spvtest::MakeInstruction(SpvOpSwitch, {1, 2, 3, 4}),
@@ -205,7 +212,7 @@ INSTANTIATE_TEST_CASE_P(
         {"%1 = OpTypeFloat 32\n%2 = OpConstant %1 1.5",
          spvtest::MakeInstruction(SpvOpSwitch, {2, 3, 4, 5}),
          "Invalid OpSwitch: selector id 2 is not a scalar integer"},
-    }), );
+    }));
 
 TEST_F(TextToBinaryTest, OneInstruction) {
   const std::string input = "OpSource OpenCL_C 12\n";
@@ -226,17 +233,17 @@ OpExecutionMode %1 LocalSizeHint 100 200 300
 }
 
 using RoundTripInstructionsTest = spvtest::TextToBinaryTestBase<
-    ::testing::TestWithParam<tuple<spv_target_env, std::string>>>;
+    ::testing::TestWithParam<std::tuple<spv_target_env, std::string>>>;
 
 TEST_P(RoundTripInstructionsTest, Sample) {
-  EXPECT_THAT(EncodeAndDecodeSuccessfully(get<1>(GetParam()),
+  EXPECT_THAT(EncodeAndDecodeSuccessfully(std::get<1>(GetParam()),
                                           SPV_BINARY_TO_TEXT_OPTION_NONE,
-                                          get<0>(GetParam())),
-              Eq(get<1>(GetParam())));
+                                          std::get<0>(GetParam())),
+              Eq(std::get<1>(GetParam())));
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     NumericLiterals, RoundTripInstructionsTest,
     // This test is independent of environment, so just test the one.
     Combine(::testing::Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1,
@@ -268,10 +275,10 @@ INSTANTIATE_TEST_CASE_P(
                 "%1 = OpTypeFloat 64\n%2 = OpConstant %1 -0x1.0002p+1024\n", // NaN
                 "%1 = OpTypeFloat 64\n%2 = OpConstant %1 0x1p+1024\n", // Inf
                 "%1 = OpTypeFloat 64\n%2 = OpConstant %1 -0x1p+1024\n", // -Inf
-            })), );
+            })));
 // clang-format on
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     MemoryAccessMasks, RoundTripInstructionsTest,
     Combine(::testing::Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1,
                               SPV_ENV_UNIVERSAL_1_2, SPV_ENV_UNIVERSAL_1_3),
@@ -285,9 +292,9 @@ INSTANTIATE_TEST_CASE_P(
                 "OpStore %1 %2 Volatile|Aligned 16\n",
                 "OpStore %1 %2 Volatile|Nontemporal\n",
                 "OpStore %1 %2 Volatile|Aligned|Nontemporal 32\n",
-            })), );
+            })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     FPFastMathModeMasks, RoundTripInstructionsTest,
     Combine(
         ::testing::Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1,
@@ -303,9 +310,9 @@ INSTANTIATE_TEST_CASE_P(
             "OpDecorate %1 FPFastMathMode NotNaN|NotInf\n",
             "OpDecorate %1 FPFastMathMode NSZ|AllowRecip\n",
             "OpDecorate %1 FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|Fast\n",
-        })), );
+        })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     LoopControlMasks, RoundTripInstructionsTest,
     Combine(::testing::Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1,
                               SPV_ENV_UNIVERSAL_1_3, SPV_ENV_UNIVERSAL_1_2),
@@ -314,18 +321,18 @@ INSTANTIATE_TEST_CASE_P(
                 "OpLoopMerge %1 %2 Unroll\n",
                 "OpLoopMerge %1 %2 DontUnroll\n",
                 "OpLoopMerge %1 %2 Unroll|DontUnroll\n",
-            })), );
+            })));
 
-INSTANTIATE_TEST_CASE_P(LoopControlMasksV11, RoundTripInstructionsTest,
-                        Combine(::testing::Values(SPV_ENV_UNIVERSAL_1_1,
-                                                  SPV_ENV_UNIVERSAL_1_2,
-                                                  SPV_ENV_UNIVERSAL_1_3),
-                                ::testing::ValuesIn(std::vector<std::string>{
-                                    "OpLoopMerge %1 %2 DependencyInfinite\n",
-                                    "OpLoopMerge %1 %2 DependencyLength 8\n",
-                                })), );
+INSTANTIATE_TEST_SUITE_P(LoopControlMasksV11, RoundTripInstructionsTest,
+                         Combine(::testing::Values(SPV_ENV_UNIVERSAL_1_1,
+                                                   SPV_ENV_UNIVERSAL_1_2,
+                                                   SPV_ENV_UNIVERSAL_1_3),
+                                 ::testing::ValuesIn(std::vector<std::string>{
+                                     "OpLoopMerge %1 %2 DependencyInfinite\n",
+                                     "OpLoopMerge %1 %2 DependencyLength 8\n",
+                                 })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SelectionControlMasks, RoundTripInstructionsTest,
     Combine(::testing::Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1,
                               SPV_ENV_UNIVERSAL_1_3, SPV_ENV_UNIVERSAL_1_2),
@@ -334,9 +341,9 @@ INSTANTIATE_TEST_CASE_P(
                 "OpSelectionMerge %1 Flatten\n",
                 "OpSelectionMerge %1 DontFlatten\n",
                 "OpSelectionMerge %1 Flatten|DontFlatten\n",
-            })), );
+            })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     FunctionControlMasks, RoundTripInstructionsTest,
     Combine(::testing::Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1,
                               SPV_ENV_UNIVERSAL_1_2, SPV_ENV_UNIVERSAL_1_3),
@@ -348,9 +355,9 @@ INSTANTIATE_TEST_CASE_P(
                 "%2 = OpFunction %1 Const %3\n",
                 "%2 = OpFunction %1 Inline|Pure|Const %3\n",
                 "%2 = OpFunction %1 DontInline|Const %3\n",
-            })), );
+            })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ImageMasks, RoundTripInstructionsTest,
     Combine(::testing::Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1,
                               SPV_ENV_UNIVERSAL_1_2, SPV_ENV_UNIVERSAL_1_3),
@@ -371,9 +378,9 @@ INSTANTIATE_TEST_CASE_P(
                 "%2 = OpImageFetch %1 %3 %4 Sample|MinLod %5 %6\n",
                 "%2 = OpImageFetch %1 %3 %4"
                 " Bias|Lod|Grad|ConstOffset|Offset|ConstOffsets|Sample|MinLod"
-                " %5 %6 %7 %8 %9 %10 %11 %12 %13\n"})), );
+                " %5 %6 %7 %8 %9 %10 %11 %12 %13\n"})));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     NewInstructionsInSPIRV1_2, RoundTripInstructionsTest,
     Combine(::testing::Values(SPV_ENV_UNIVERSAL_1_2, SPV_ENV_UNIVERSAL_1_3),
             ::testing::ValuesIn(std::vector<std::string>{
@@ -382,7 +389,7 @@ INSTANTIATE_TEST_CASE_P(
                 "OpExecutionModeId %1 LocalSizeHintId %2\n",
                 "OpDecorateId %1 AlignmentId %2\n",
                 "OpDecorateId %1 MaxByteOffsetId %2\n",
-            })), );
+            })));
 
 using MaskSorting = TextToBinaryTest;
 
@@ -530,24 +537,25 @@ TEST_P(GeneratorStringTest, Sample) {
   spvTextDestroy(decoded_text);
 }
 
-INSTANTIATE_TEST_CASE_P(GeneratorStrings, GeneratorStringTest,
-                        ::testing::ValuesIn(std::vector<GeneratorStringCase>{
-                            {SPV_GENERATOR_KHRONOS, 12, "Khronos; 12"},
-                            {SPV_GENERATOR_LUNARG, 99, "LunarG; 99"},
-                            {SPV_GENERATOR_VALVE, 1, "Valve; 1"},
-                            {SPV_GENERATOR_CODEPLAY, 65535, "Codeplay; 65535"},
-                            {SPV_GENERATOR_NVIDIA, 19, "NVIDIA; 19"},
-                            {SPV_GENERATOR_ARM, 1000, "ARM; 1000"},
-                            {SPV_GENERATOR_KHRONOS_LLVM_TRANSLATOR, 38,
-                             "Khronos LLVM/SPIR-V Translator; 38"},
-                            {SPV_GENERATOR_KHRONOS_ASSEMBLER, 2,
-                             "Khronos SPIR-V Tools Assembler; 2"},
-                            {SPV_GENERATOR_KHRONOS_GLSLANG, 1,
-                             "Khronos Glslang Reference Front End; 1"},
-                            {1000, 18, "Unknown(1000); 18"},
-                            {65535, 32767, "Unknown(65535); 32767"},
-                        }), );
+INSTANTIATE_TEST_SUITE_P(GeneratorStrings, GeneratorStringTest,
+                         ::testing::ValuesIn(std::vector<GeneratorStringCase>{
+                             {SPV_GENERATOR_KHRONOS, 12, "Khronos; 12"},
+                             {SPV_GENERATOR_LUNARG, 99, "LunarG; 99"},
+                             {SPV_GENERATOR_VALVE, 1, "Valve; 1"},
+                             {SPV_GENERATOR_CODEPLAY, 65535, "Codeplay; 65535"},
+                             {SPV_GENERATOR_NVIDIA, 19, "NVIDIA; 19"},
+                             {SPV_GENERATOR_ARM, 1000, "ARM; 1000"},
+                             {SPV_GENERATOR_KHRONOS_LLVM_TRANSLATOR, 38,
+                              "Khronos LLVM/SPIR-V Translator; 38"},
+                             {SPV_GENERATOR_KHRONOS_ASSEMBLER, 2,
+                              "Khronos SPIR-V Tools Assembler; 2"},
+                             {SPV_GENERATOR_KHRONOS_GLSLANG, 1,
+                              "Khronos Glslang Reference Front End; 1"},
+                             {1000, 18, "Unknown(1000); 18"},
+                             {65535, 32767, "Unknown(65535); 32767"},
+                         }));
 
 // TODO(dneto): Test new instructions and enums in SPIR-V 1.3
 
-}  // anonymous namespace
+}  // namespace
+}  // namespace spvtools

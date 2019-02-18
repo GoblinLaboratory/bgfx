@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gmock/gmock.h>
+#include "gmock/gmock.h"
+#include "test/unit_spirv.h"
 
-#include "unit_spirv.h"
-
+namespace spvtools {
 namespace {
 
 using GetTargetOpcodeTableGetTest = ::testing::TestWithParam<spv_target_env>;
@@ -32,7 +32,8 @@ TEST_P(GetTargetOpcodeTableGetTest, InvalidPointerTable) {
   ASSERT_EQ(SPV_ERROR_INVALID_POINTER, spvOpcodeTableGet(nullptr, GetParam()));
 }
 
-INSTANTIATE_TEST_CASE_P(OpcodeTableGet, GetTargetOpcodeTableGetTest,
-                        ValuesIn(spvtest::AllTargetEnvironments()));
+INSTANTIATE_TEST_SUITE_P(OpcodeTableGet, GetTargetOpcodeTableGetTest,
+                         ValuesIn(spvtest::AllTargetEnvironments()));
 
-}  // anonymous namespace
+}  // namespace
+}  // namespace spvtools

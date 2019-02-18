@@ -12,16 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <algorithm>
+#include <utility>
 #include <vector>
+
 #include "gmock/gmock.h"
+#include "source/enum_set.h"
+#include "test/unit_spirv.h"
 
-#include "enum_set.h"
-#include "unit_spirv.h"
-
+namespace spvtools {
 namespace {
 
-using libspirv::CapabilitySet;
-using libspirv::EnumSet;
 using spvtest::ElementsIn;
 using ::testing::Eq;
 using ::testing::ValuesIn;
@@ -266,23 +267,24 @@ TEST_P(CapabilitySetForEachTest, OperatorEqualsSelfAssign) {
   EXPECT_THAT(ElementsIn(assigned), Eq(GetParam().expected));
 }
 
-INSTANTIATE_TEST_CASE_P(Samples, CapabilitySetForEachTest,
-                        ValuesIn(std::vector<ForEachCase>{
-                            {{}, {}},
-                            {{SpvCapabilityMatrix}, {SpvCapabilityMatrix}},
-                            {{SpvCapabilityKernel, SpvCapabilityShader},
-                             {SpvCapabilityShader, SpvCapabilityKernel}},
-                            {{static_cast<SpvCapability>(999)},
-                             {static_cast<SpvCapability>(999)}},
-                            {{static_cast<SpvCapability>(0x7fffffff)},
-                             {static_cast<SpvCapability>(0x7fffffff)}},
-                            // Mixture and out of order
-                            {{static_cast<SpvCapability>(0x7fffffff),
-                              static_cast<SpvCapability>(100),
-                              SpvCapabilityShader, SpvCapabilityMatrix},
-                             {SpvCapabilityMatrix, SpvCapabilityShader,
-                              static_cast<SpvCapability>(100),
-                              static_cast<SpvCapability>(0x7fffffff)}},
-                        }), );
+INSTANTIATE_TEST_SUITE_P(Samples, CapabilitySetForEachTest,
+                         ValuesIn(std::vector<ForEachCase>{
+                             {{}, {}},
+                             {{SpvCapabilityMatrix}, {SpvCapabilityMatrix}},
+                             {{SpvCapabilityKernel, SpvCapabilityShader},
+                              {SpvCapabilityShader, SpvCapabilityKernel}},
+                             {{static_cast<SpvCapability>(999)},
+                              {static_cast<SpvCapability>(999)}},
+                             {{static_cast<SpvCapability>(0x7fffffff)},
+                              {static_cast<SpvCapability>(0x7fffffff)}},
+                             // Mixture and out of order
+                             {{static_cast<SpvCapability>(0x7fffffff),
+                               static_cast<SpvCapability>(100),
+                               SpvCapabilityShader, SpvCapabilityMatrix},
+                              {SpvCapabilityMatrix, SpvCapabilityShader,
+                               static_cast<SpvCapability>(100),
+                               static_cast<SpvCapability>(0x7fffffff)}},
+                         }));
 
-}  // anonymous namespace
+}  // namespace
+}  // namespace spvtools

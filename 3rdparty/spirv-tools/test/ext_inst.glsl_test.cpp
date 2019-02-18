@@ -13,11 +13,13 @@
 // limitations under the License.
 
 #include <algorithm>
+#include <string>
 #include <vector>
 
-#include "latest_version_glsl_std_450_header.h"
-#include "unit_spirv.h"
+#include "source/latest_version_glsl_std_450_header.h"
+#include "test/unit_spirv.h"
 
+namespace spvtools {
 namespace {
 
 /// Context for an extended instruction.
@@ -59,7 +61,7 @@ OpFunctionEnd
 ; Generator: Khronos SPIR-V Tools Assembler; 0
 ; Bound: 9
 ; Schema: 0)";
-  spv_binary binary;
+  spv_binary binary = nullptr;
   spv_diagnostic diagnostic;
   spv_result_t error = spvTextToBinary(context, spirv.c_str(), spirv.size(),
                                        &binary, &diagnostic);
@@ -100,10 +102,11 @@ OpFunctionEnd
   }
   EXPECT_EQ(spirv_header + spirv, output_text->str);
   spvTextDestroy(output_text);
+  spvBinaryDestroy(binary);
   spvContextDestroy(context);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ExtInstParameters, ExtInstGLSLstd450RoundTripTest,
     ::testing::ValuesIn(std::vector<ExtInstContext>({
         // We are only testing the correctness of encoding and decoding here.
@@ -195,6 +198,7 @@ INSTANTIATE_TEST_CASE_P(
         {"NMin", "%5 %5", 79, 7, {5, 5}},
         {"NMax", "%5 %5", 80, 7, {5, 5}},
         {"NClamp", "%5 %5 %5", 81, 8, {5, 5, 5}},
-    })), );
+    })));
 
-}  // anonymous namespace
+}  // namespace
+}  // namespace spvtools

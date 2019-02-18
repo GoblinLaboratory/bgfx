@@ -15,11 +15,14 @@
 // Assembler tests for instructions in the "Function" section of the
 // SPIR-V spec.
 
-#include "unit_spirv.h"
+#include <string>
+#include <vector>
 
 #include "gmock/gmock.h"
-#include "test_fixture.h"
+#include "test/test_fixture.h"
+#include "test/unit_spirv.h"
 
+namespace spvtools {
 namespace {
 
 using spvtest::EnumCase;
@@ -42,14 +45,14 @@ TEST_P(OpFunctionControlTest, AnySingleFunctionControlMask) {
 
 // clang-format off
 #define CASE(VALUE,NAME) { SpvFunctionControl##VALUE, NAME }
-INSTANTIATE_TEST_CASE_P(TextToBinaryFunctionTest, OpFunctionControlTest,
+INSTANTIATE_TEST_SUITE_P(TextToBinaryFunctionTest, OpFunctionControlTest,
                         ::testing::ValuesIn(std::vector<EnumCase<SpvFunctionControlMask>>{
                             CASE(MaskNone, "None"),
                             CASE(InlineMask, "Inline"),
                             CASE(DontInlineMask, "DontInline"),
                             CASE(PureMask, "Pure"),
                             CASE(ConstMask, "Const"),
-                        }),);
+                        }));
 #undef CASE
 // clang-format on
 
@@ -74,4 +77,5 @@ TEST_F(OpFunctionControlTest, WrongFunctionControl) {
 // TODO(dneto): OpFunctionEnd
 // TODO(dneto): OpFunctionCall
 
-}  // anonymous namespace
+}  // namespace
+}  // namespace spvtools

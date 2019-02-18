@@ -1,6 +1,8 @@
 //
 // Copyright (C) 2002-2005  3Dlabs Inc. Ltd.
 // Copyright (C) 2013 LunarG, Inc.
+// Copyright (C) 2015-2018 Google, Inc.
+//
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -188,7 +190,7 @@ void TPpContext::TokenStream::putToken(int atom, TPpToken* ppToken)
     // save the numeric value
     if (SaveValue(atom)) {
         const char* n = reinterpret_cast<const char*>(&ppToken->i64val);
-        for (int i = 0; i < sizeof(ppToken->i64val); ++i)
+        for (size_t i = 0; i < sizeof(ppToken->i64val); ++i)
             putSubtoken(*n++);
     }
 }
@@ -238,8 +240,8 @@ int TPpContext::TokenStream::getToken(TParseContextBase& parseContext, TPpToken 
     // get the numeric value
     if (SaveValue(atom)) {
         char* n = reinterpret_cast<char*>(&ppToken->i64val);
-        for (int i = 0; i < sizeof(ppToken->i64val); ++i)
-            *n++ = getSubtoken();
+        for (size_t i = 0; i < sizeof(ppToken->i64val); ++i)
+            *n++ = (char)getSubtoken();
     }
 
     return atom;

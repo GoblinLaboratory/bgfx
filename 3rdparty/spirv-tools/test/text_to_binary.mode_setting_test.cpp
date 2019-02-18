@@ -15,18 +15,20 @@
 // Assembler tests for instructions in the "Mode-Setting" section of the
 // SPIR-V spec.
 
-#include "unit_spirv.h"
+#include <string>
+#include <tuple>
+#include <vector>
 
 #include "gmock/gmock.h"
-#include "test_fixture.h"
+#include "test/test_fixture.h"
+#include "test/unit_spirv.h"
 
+namespace spvtools {
 namespace {
 
 using spvtest::EnumCase;
 using spvtest::MakeInstruction;
 using spvtest::MakeVector;
-using std::get;
-using std::tuple;
 using ::testing::Combine;
 using ::testing::Eq;
 using ::testing::TestWithParam;
@@ -67,7 +69,7 @@ TEST_P(OpMemoryModelTest, AnyMemoryModelCase) {
         #MEMORY                                                          \
   }
 // clang-format off
-INSTANTIATE_TEST_CASE_P(TextToBinaryMemoryModel, OpMemoryModelTest,
+INSTANTIATE_TEST_SUITE_P(TextToBinaryMemoryModel, OpMemoryModelTest,
                         ValuesIn(std::vector<MemoryModelCase>{
                           // These cases exercise each addressing model, and
                           // each memory model, but not necessarily in
@@ -76,7 +78,7 @@ INSTANTIATE_TEST_CASE_P(TextToBinaryMemoryModel, OpMemoryModelTest,
                             CASE(Logical,GLSL450),
                             CASE(Physical32,OpenCL),
                             CASE(Physical64,OpenCL),
-                        }),);
+                        }));
 #undef CASE
 // clang-format on
 
@@ -114,7 +116,7 @@ TEST_P(OpEntryPointTest, AnyEntryPointCase) {
 
 // clang-format off
 #define CASE(NAME) SpvExecutionModel##NAME, #NAME
-INSTANTIATE_TEST_CASE_P(TextToBinaryEntryPoint, OpEntryPointTest,
+INSTANTIATE_TEST_SUITE_P(TextToBinaryEntryPoint, OpEntryPointTest,
                         ValuesIn(std::vector<EntryPointCase>{
                           { CASE(Vertex), "" },
                           { CASE(TessellationControl), "my tess" },
@@ -123,7 +125,7 @@ INSTANTIATE_TEST_CASE_P(TextToBinaryEntryPoint, OpEntryPointTest,
                           { CASE(Fragment), "FAT32" },
                           { CASE(GLCompute), "cubic" },
                           { CASE(Kernel), "Sanders" },
-                        }),);
+                        }));
 #undef CASE
 // clang-format on
 
@@ -134,21 +136,22 @@ TEST_F(OpEntryPointTest, WrongModel) {
 
 // Test OpExecutionMode
 using OpExecutionModeTest = spvtest::TextToBinaryTestBase<
-    TestWithParam<tuple<spv_target_env, EnumCase<SpvExecutionMode>>>>;
+    TestWithParam<std::tuple<spv_target_env, EnumCase<SpvExecutionMode>>>>;
 
 TEST_P(OpExecutionModeTest, AnyExecutionMode) {
   // This string should assemble, but should not validate.
   std::stringstream input;
-  input << "OpExecutionMode %1 " << get<1>(GetParam()).name();
-  for (auto operand : get<1>(GetParam()).operands()) input << " " << operand;
-  EXPECT_THAT(
-      CompiledInstructions(input.str(), get<0>(GetParam())),
-      Eq(MakeInstruction(SpvOpExecutionMode, {1, get<1>(GetParam()).value()},
-                         get<1>(GetParam()).operands())));
+  input << "OpExecutionMode %1 " << std::get<1>(GetParam()).name();
+  for (auto operand : std::get<1>(GetParam()).operands())
+    input << " " << operand;
+  EXPECT_THAT(CompiledInstructions(input.str(), std::get<0>(GetParam())),
+              Eq(MakeInstruction(SpvOpExecutionMode,
+                                 {1, std::get<1>(GetParam()).value()},
+                                 std::get<1>(GetParam()).operands())));
 }
 
 #define CASE(NAME) SpvExecutionMode##NAME, #NAME
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinaryExecutionMode, OpExecutionModeTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCase<SpvExecutionMode>>{
@@ -185,16 +188,16 @@ INSTANTIATE_TEST_CASE_P(
                 {CASE(OutputTriangleStrip), {}},
                 {CASE(VecTypeHint), {96}},
                 {CASE(ContractionOff), {}},
-            })), );
+            })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinaryExecutionModeV11, OpExecutionModeTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCase<SpvExecutionMode>>{
                 {CASE(Initializer)},
                 {CASE(Finalizer)},
                 {CASE(SubgroupSize), {12}},
-                {CASE(SubgroupsPerWorkgroup), {64}}})), );
+                {CASE(SubgroupsPerWorkgroup), {64}}})));
 #undef CASE
 
 TEST_F(OpExecutionModeTest, WrongMode) {
@@ -221,7 +224,7 @@ TEST_P(OpCapabilityTest, AnyCapability) {
 
 // clang-format off
 #define CASE(NAME) { SpvCapability##NAME, #NAME }
-INSTANTIATE_TEST_CASE_P(TextToBinaryCapability, OpCapabilityTest,
+INSTANTIATE_TEST_SUITE_P(TextToBinaryCapability, OpCapabilityTest,
                         ValuesIn(std::vector<EnumCase<SpvCapability>>{
                             CASE(Matrix),
                             CASE(Shader),
@@ -277,7 +280,7 @@ INSTANTIATE_TEST_CASE_P(TextToBinaryCapability, OpCapabilityTest,
                             CASE(DerivativeControl),
                             CASE(InterpolationFunction),
                             CASE(TransformFeedback),
-                        }),);
+                        }));
 #undef CASE
 // clang-format on
 
@@ -295,4 +298,5 @@ TEST_F(TextToBinaryCapability, BadInvalidCapability) {
 
 // TODO(dneto): OpExecutionMode
 
-}  // anonymous namespace
+}  // namespace
+}  // namespace spvtools

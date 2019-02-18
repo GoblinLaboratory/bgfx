@@ -17,15 +17,15 @@
 #include <string>
 
 #include "gmock/gmock.h"
-#include "unit_spirv.h"
-#include "val_fixtures.h"
+#include "test/unit_spirv.h"
+#include "test/val/val_fixtures.h"
 
+namespace spvtools {
+namespace val {
 namespace {
 
 using ::testing::HasSubstr;
 using ::testing::Not;
-
-using std::string;
 
 using ValidateArithmetics = spvtest::ValidateBase<bool>;
 
@@ -39,6 +39,7 @@ OpCapability Matrix
 %ext_inst = OpExtInstImport "GLSL.std.450"
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %main "main"
+OpExecutionMode %main OriginUpperLeft
 %void = OpTypeVoid
 %func = OpTypeFunction %void
 %bool = OpTypeBool
@@ -604,10 +605,9 @@ TEST_F(ValidateArithmetics, DotNotVectorTypeOperand1) {
 )";
 
   CompileSuccessfully(GenerateCode(body).c_str());
-  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
-  EXPECT_THAT(
-      getDiagnosticString(),
-      HasSubstr("Expected float vector as operand: Dot operand index 2"));
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(), HasSubstr("Operand 6[%float] cannot be a "
+                                               "type"));
 }
 
 TEST_F(ValidateArithmetics, DotNotVectorTypeOperand2) {
@@ -1273,4 +1273,6 @@ TEST_F(ValidateArithmetics, SMulExtendedResultTypeMembersNotIdentical) {
                 "SMulExtended"));
 }
 
-}  // anonymous namespace
+}  // namespace
+}  // namespace val
+}  // namespace spvtools

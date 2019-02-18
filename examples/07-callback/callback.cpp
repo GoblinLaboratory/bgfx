@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2018 Branimir Karadzic. All rights reserved.
+ * Copyright 2011-2019 Branimir Karadzic. All rights reserved.
  * License: https://github.com/bkaradzic/bgfx#license-bsd-2-clause
  */
 
@@ -97,8 +97,10 @@ struct BgfxCallback : public bgfx::CallbackI
 	{
 	}
 
-	virtual void fatal(bgfx::Fatal::Enum _code, const char* _str) override
+	virtual void fatal(const char* _filePath, uint16_t _line, bgfx::Fatal::Enum _code, const char* _str) override
 	{
+		BX_UNUSED(_filePath, _line);
+
 		// Something unexpected happened, inform user and bail out.
 		bx::debugPrintf("Fatal error: 0x%08x: %s", _code, _str);
 
@@ -421,8 +423,8 @@ public:
 			// if no other draw calls are submitted to view 0.
 			bgfx::touch(0);
 
-			float at[3]  = { 0.0f, 0.0f,   0.0f };
-			float eye[3] = { 0.0f, 0.0f, -35.0f };
+			const bx::Vec3 at  = { 0.0f, 0.0f,   0.0f };
+			const bx::Vec3 eye = { 0.0f, 0.0f, -35.0f };
 
 			float view[16];
 			float proj[16];

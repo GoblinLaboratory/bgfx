@@ -118,19 +118,19 @@ public:
 		// Set up ID buffer, which has a color target and depth buffer
 		m_pickingRT = bgfx::createTexture2D(ID_DIM, ID_DIM, false, 1, bgfx::TextureFormat::RGBA8, 0
 			| BGFX_TEXTURE_RT
-			| BGFX_TEXTURE_MIN_POINT
-			| BGFX_TEXTURE_MAG_POINT
-			| BGFX_TEXTURE_MIP_POINT
-			| BGFX_TEXTURE_U_CLAMP
-			| BGFX_TEXTURE_V_CLAMP
+			| BGFX_SAMPLER_MIN_POINT
+			| BGFX_SAMPLER_MAG_POINT
+			| BGFX_SAMPLER_MIP_POINT
+			| BGFX_SAMPLER_U_CLAMP
+			| BGFX_SAMPLER_V_CLAMP
 			);
 		m_pickingRTDepth = bgfx::createTexture2D(ID_DIM, ID_DIM, false, 1, bgfx::TextureFormat::D24S8, 0
 			| BGFX_TEXTURE_RT
-			| BGFX_TEXTURE_MIN_POINT
-			| BGFX_TEXTURE_MAG_POINT
-			| BGFX_TEXTURE_MIP_POINT
-			| BGFX_TEXTURE_U_CLAMP
-			| BGFX_TEXTURE_V_CLAMP
+			| BGFX_SAMPLER_MIN_POINT
+			| BGFX_SAMPLER_MAG_POINT
+			| BGFX_SAMPLER_MIP_POINT
+			| BGFX_SAMPLER_U_CLAMP
+			| BGFX_SAMPLER_V_CLAMP
 			);
 
 		// CPU texture for blitting to and reading ID buffer so we can see what was clicked on.
@@ -140,11 +140,11 @@ public:
 		m_blitTex = bgfx::createTexture2D(ID_DIM, ID_DIM, false, 1, bgfx::TextureFormat::RGBA8, 0
 			| BGFX_TEXTURE_BLIT_DST
 			| BGFX_TEXTURE_READ_BACK
-			| BGFX_TEXTURE_MIN_POINT
-			| BGFX_TEXTURE_MAG_POINT
-			| BGFX_TEXTURE_MIP_POINT
-			| BGFX_TEXTURE_U_CLAMP
-			| BGFX_TEXTURE_V_CLAMP
+			| BGFX_SAMPLER_MIN_POINT
+			| BGFX_SAMPLER_MAG_POINT
+			| BGFX_SAMPLER_MIP_POINT
+			| BGFX_SAMPLER_U_CLAMP
+			| BGFX_SAMPLER_V_CLAMP
 			);
 
 		bgfx::TextureHandle rt[2] =
@@ -238,13 +238,14 @@ public:
 				const float camSpeed = 0.25;
 				float cameraSpin = (float)m_cameraSpin;
 				float eyeDist = 2.5f;
-				float eye[3] =
+
+				const bx::Vec3 at = { 0.0f, 0.0f, 0.0f };
+				const bx::Vec3 eye =
 				{
 					-eyeDist * bx::sin(time*cameraSpin*camSpeed),
 					0.0f,
 					-eyeDist * bx::cos(time*cameraSpin*camSpeed),
 				};
-				float at[3] = { 0.0f, 0.0f, 0.0f };
 
 				float view[16];
 				bx::mtxLookAt(view, eye, at);
@@ -267,13 +268,8 @@ public:
 				float mouseXNDC = ( m_mouseState.m_mx             / (float)m_width ) * 2.0f - 1.0f;
 				float mouseYNDC = ((m_height - m_mouseState.m_my) / (float)m_height) * 2.0f - 1.0f;
 
-				float pickEye[3];
-				float mousePosNDC[3] = { mouseXNDC, mouseYNDC, 0.0f };
-				bx::vec3MulMtxH(pickEye, mousePosNDC, invViewProj);
-
-				float pickAt[3];
-				float mousePosNDCEnd[3] = { mouseXNDC, mouseYNDC, 1.0f };
-				bx::vec3MulMtxH(pickAt, mousePosNDCEnd, invViewProj);
+				const bx::Vec3 pickEye = bx::mulH({ mouseXNDC, mouseYNDC, 0.0f }, invViewProj);
+				const bx::Vec3 pickAt  = bx::mulH({ mouseXNDC, mouseYNDC, 1.0f }, invViewProj);
 
 				// Look at our unprojected point
 				float pickView[16];

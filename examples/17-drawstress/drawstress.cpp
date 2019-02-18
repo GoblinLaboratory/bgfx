@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2018 Branimir Karadzic. All rights reserved.
+ * Copyright 2011-2019 Branimir Karadzic. All rights reserved.
  * License: https://github.com/bkaradzic/bgfx#license-bsd-2-clause
  */
 
@@ -304,7 +304,7 @@ public:
 
 			if (m_deltaTimeNs > 1000000)
 			{
-				m_deltaTimeAvgNs = m_deltaTimeNs / bx::int64_max(1, m_numFrames);
+				m_deltaTimeAvgNs = m_deltaTimeNs / bx::max<int64_t>(1, m_numFrames);
 
 				if (m_autoAdjust)
 				{
@@ -375,8 +375,8 @@ public:
 
 			imguiEndFrame();
 
-			float at[3] = { 0.0f, 0.0f, 0.0f };
-			float eye[3] = { 0.0f, 0.0f, -35.0f };
+			const bx::Vec3 at  = { 0.0f, 0.0f,   0.0f };
+			const bx::Vec3 eye = { 0.0f, 0.0f, -35.0f };
 
 			float view[16];
 			bx::mtxLookAt(view, eye, at);

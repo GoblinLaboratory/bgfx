@@ -12,15 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "unit_spirv.h"
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "gmock/gmock.h"
-#include "test_fixture.h"
+#include "test/test_fixture.h"
+#include "test/unit_spirv.h"
 
-using ::testing::Eq;
-
+namespace spvtools {
 namespace {
 
+using ::testing::Eq;
 using RoundTripLiteralsTest =
     spvtest::TextToBinaryTestBase<::testing::TestWithParam<std::string>>;
 
@@ -29,7 +32,7 @@ TEST_P(RoundTripLiteralsTest, Sample) {
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     StringLiterals, RoundTripLiteralsTest,
     ::testing::ValuesIn(std::vector<std::string>{
         "OpName %1 \"\"\n",           // empty
@@ -46,7 +49,7 @@ INSTANTIATE_TEST_CASE_P(
         "OpName %1 \"\\\"foo\nbar\\\"\"\n",       // escaped quote
         "OpName %1 \"\\\\foo\nbar\\\\\"\n",       // escaped backslash
         "OpName %1 \"\xE4\xBA\xB2\"\n",             // UTF-8
-    }),);
+    }));
 // clang-format on
 
 using RoundTripSpecialCaseLiteralsTest = spvtest::TextToBinaryTestBase<
@@ -60,13 +63,14 @@ TEST_P(RoundTripSpecialCaseLiteralsTest, Sample) {
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     StringLiterals, RoundTripSpecialCaseLiteralsTest,
     ::testing::ValuesIn(std::vector<std::pair<std::string, std::string>>{
       {"OpName %1 \"\\foo\"\n", "OpName %1 \"foo\"\n"}, // Escape f
       {"OpName %1 \"\\\nfoo\"\n", "OpName %1 \"\nfoo\"\n"}, // Escape newline
       {"OpName %1 \"\\\xE4\xBA\xB2\"\n", "OpName %1 \"\xE4\xBA\xB2\"\n"}, // Escape utf-8
-    }),);
+    }));
 // clang-format on
 
-}  // anonymous namespace
+}  // namespace
+}  // namespace spvtools

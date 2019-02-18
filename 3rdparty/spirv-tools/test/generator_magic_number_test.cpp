@@ -12,17 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "unit_spirv.h"
+#include <limits>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include <gmock/gmock.h>
-
+#include "gmock/gmock.h"
 #include "source/opcode.h"
+#include "test/unit_spirv.h"
+
+namespace spvtools {
+namespace {
 
 using ::spvtest::EnumCase;
 using ::testing::Eq;
-
-namespace {
-
 using GeneratorMagicNumberTest =
     ::testing::TestWithParam<EnumCase<spv_generator_t>>;
 
@@ -31,7 +34,7 @@ TEST_P(GeneratorMagicNumberTest, Single) {
               GetParam().name());
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Registered, GeneratorMagicNumberTest,
     ::testing::ValuesIn(std::vector<EnumCase<spv_generator_t>>{
         {SPV_GENERATOR_KHRONOS, "Khronos"},
@@ -44,14 +47,16 @@ INSTANTIATE_TEST_CASE_P(
          "Khronos LLVM/SPIR-V Translator"},
         {SPV_GENERATOR_KHRONOS_ASSEMBLER, "Khronos SPIR-V Tools Assembler"},
         {SPV_GENERATOR_KHRONOS_GLSLANG, "Khronos Glslang Reference Front End"},
-    }), );
+    }));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Unregistered, GeneratorMagicNumberTest,
     ::testing::ValuesIn(std::vector<EnumCase<spv_generator_t>>{
         // We read registered entries from the SPIR-V XML Registry file
         // which can change over time.
         {spv_generator_t(1000), "Unknown"},
         {spv_generator_t(9999), "Unknown"},
-    }), );
-}  // anonymous namespace
+    }));
+
+}  // namespace
+}  // namespace spvtools

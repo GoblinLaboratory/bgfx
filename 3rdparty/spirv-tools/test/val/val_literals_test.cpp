@@ -18,15 +18,17 @@
 #include <utility>
 
 #include "gmock/gmock.h"
-#include "val_fixtures.h"
+#include "test/val/val_fixtures.h"
+
+namespace spvtools {
+namespace val {
+namespace {
 
 using ::testing::HasSubstr;
 
 using ValidateLiterals = spvtest::ValidateBase<std::string>;
 using ValidateLiteralsShader = spvtest::ValidateBase<std::string>;
 using ValidateLiteralsKernel = spvtest::ValidateBase<std::string>;
-
-namespace {
 
 std::string GenerateShaderCode() {
   std::string str = R"(
@@ -97,7 +99,7 @@ TEST_P(ValidateLiteralsShader, LiteralsShaderBad) {
                 "or sign extended when Signedness is 1"));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     LiteralsShaderCases, ValidateLiteralsShader,
     ::testing::Values("%11 = OpConstant %int16  !0xFFFF0000",  // Sign bit is 0
                       "%11 = OpConstant %int16  !0x00008000",  // Sign bit is 1
@@ -130,9 +132,11 @@ TEST_P(ValidateLiteralsKernel, LiteralsKernelBad) {
                 "or sign extended when Signedness is 1"));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     LiteralsKernelCases, ValidateLiteralsKernel,
     ::testing::Values("%2 = OpConstant %uint8  !0xABCDEF00",
                       "%2 = OpConstant %uint8  !0xABCDEFFF"));
 
 }  // namespace
+}  // namespace val
+}  // namespace spvtools

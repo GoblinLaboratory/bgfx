@@ -14,21 +14,20 @@
 
 #include <algorithm>
 #include <cstring>
+#include <string>
 #include <utility>
 #include <vector>
 
 #include "gmock/gmock.h"
-
 #include "source/spirv_constant.h"
 #include "source/util/bitutils.h"
 #include "source/util/hex_float.h"
-#include "test_fixture.h"
-#include "unit_spirv.h"
+#include "test/test_fixture.h"
+#include "test/unit_spirv.h"
 
+namespace spvtools {
 namespace {
 
-using libspirv::AssemblyContext;
-using libspirv::AssemblyGrammar;
 using spvtest::AutoText;
 using spvtest::Concatenate;
 using spvtest::MakeInstruction;
@@ -59,7 +58,7 @@ TEST_P(GoodMaskParseTest, GoodMaskExpressions) {
   spvContextDestroy(context);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ParseMask, GoodMaskParseTest,
     ::testing::ValuesIn(std::vector<MaskCase>{
         {SPV_OPERAND_TYPE_FP_FAST_MATH_MODE, 0, "None"},
@@ -88,7 +87,7 @@ INSTANTIATE_TEST_CASE_P(
         {SPV_OPERAND_TYPE_FUNCTION_CONTROL, 4, "Pure"},
         {SPV_OPERAND_TYPE_FUNCTION_CONTROL, 8, "Const"},
         {SPV_OPERAND_TYPE_FUNCTION_CONTROL, 0xd, "Inline|Const|Pure"},
-    }), );
+    }));
 
 using BadFPFastMathMaskParseTest = ::testing::TestWithParam<const char*>;
 
@@ -103,12 +102,12 @@ TEST_P(BadFPFastMathMaskParseTest, BadMaskExpressions) {
   spvContextDestroy(context);
 }
 
-INSTANTIATE_TEST_CASE_P(ParseMask, BadFPFastMathMaskParseTest,
-                        ::testing::ValuesIn(std::vector<const char*>{
-                            nullptr, "", "NotValidEnum", "|", "NotInf|",
-                            "|NotInf", "NotInf||NotNaN",
-                            "Unroll"  // A good word, but for the wrong enum
-                        }), );
+INSTANTIATE_TEST_SUITE_P(ParseMask, BadFPFastMathMaskParseTest,
+                         ::testing::ValuesIn(std::vector<const char*>{
+                             nullptr, "", "NotValidEnum", "|", "NotInf|",
+                             "|NotInf", "NotInf||NotNaN",
+                             "Unroll"  // A good word, but for the wrong enum
+                         }));
 
 TEST_F(TextToBinaryTest, InvalidText) {
   ASSERT_EQ(SPV_ERROR_INVALID_TEXT,
@@ -198,7 +197,7 @@ TEST_P(TextToBinaryFloatValueTest, Samples) {
                                               {1, 2, GetParam().second})})));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     FloatValues, TextToBinaryFloatValueTest,
     ::testing::ValuesIn(std::vector<std::pair<std::string, uint32_t>>{
         {"0.0", 0x00000000},          // +0
@@ -214,7 +213,7 @@ INSTANTIATE_TEST_CASE_P(
         {"-2.5", 0xc0200000},
         {"!0xff800000", 0xff800000},  // -inf
         {"!0xff800001", 0xff800001},  // NaN
-    }), );
+    }));
 
 using TextToBinaryHalfValueTest = spvtest::TextToBinaryTestBase<
     ::testing::TestWithParam<std::pair<std::string, uint32_t>>>;
@@ -228,7 +227,7 @@ TEST_P(TextToBinaryHalfValueTest, Samples) {
                                               {1, 2, GetParam().second})})));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     HalfValues, TextToBinaryHalfValueTest,
     ::testing::ValuesIn(std::vector<std::pair<std::string, uint32_t>>{
         {"0.0", 0x00000000},
@@ -246,7 +245,7 @@ INSTANTIATE_TEST_CASE_P(
         {"0x1.8p4", 0x00004e00},
         {"0x1.801p4", 0x00004e00},
         {"0x1.804p4", 0x00004e01},
-    }), );
+    }));
 
 TEST(CreateContext, InvalidEnvironment) {
   spv_target_env env;
@@ -266,4 +265,5 @@ TEST(CreateContext, VulkanEnvironment) {
   spvContextDestroy(c);
 }
 
-}  // anonymous namespace
+}  // namespace
+}  // namespace spvtools

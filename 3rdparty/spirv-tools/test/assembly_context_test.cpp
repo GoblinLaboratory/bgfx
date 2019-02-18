@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "unit_spirv.h"
-
-#include <gmock/gmock.h>
+#include <string>
 #include <vector>
 
+#include "gmock/gmock.h"
 #include "source/instruction.h"
+#include "test/unit_spirv.h"
 
-using libspirv::AssemblyContext;
+namespace spvtools {
+namespace {
+
 using spvtest::AutoText;
 using spvtest::Concatenate;
 using ::testing::Eq;
-
-namespace {
 
 struct EncodeStringCase {
   std::string str;
@@ -46,7 +46,7 @@ TEST_P(EncodeStringTest, Sample) {
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     BinaryEncodeString, EncodeStringTest,
     ::testing::ValuesIn(std::vector<EncodeStringCase>{
       // Use cases that exercise at least one to two words,
@@ -70,7 +70,8 @@ INSTANTIATE_TEST_CASE_P(
       // A very long string, encoded after an initial word.
       // SPIR-V limits strings to 65535 characters.
       {std::string(65535, 'a'), {1}},
-    }),);
+    }));
 // clang-format on
 
-}  // anonymous namespace
+}  // namespace
+}  // namespace spvtools

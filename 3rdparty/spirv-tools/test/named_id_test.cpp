@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <string>
 #include <vector>
 
-#include "test_fixture.h"
-#include "unit_spirv.h"
+#include "test/test_fixture.h"
+#include "test/unit_spirv.h"
 
+namespace spvtools {
 namespace {
 
 using NamedIdTest = spvtest::TextToBinaryTest;
@@ -63,7 +65,7 @@ TEST_P(IdValidityTest, IdTypes) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ValidAndInvalidIds, IdValidityTest,
     ::testing::ValuesIn(std::vector<IdCheckCase>(
         {{"%1", true},          {"%2abc", true},   {"%3Def", true},
@@ -79,6 +81,7 @@ INSTANTIATE_TEST_CASE_P(
          {"%foo_@_bar", false}, {"%", false},
 
          {"5", false},          {"32", false},     {"foo", false},
-         {"a%bar", false}})), );
+         {"a%bar", false}})));
 
-}  // anonymous namespace
+}  // namespace
+}  // namespace spvtools

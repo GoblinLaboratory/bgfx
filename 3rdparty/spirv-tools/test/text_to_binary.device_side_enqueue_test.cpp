@@ -15,12 +15,16 @@
 // Assembler tests for instructions in the "Device-Side Enqueue Instructions"
 // section of the SPIR-V spec.
 
-#include "unit_spirv.h"
+#include <string>
+#include <vector>
 
 #include "gmock/gmock.h"
-#include "test_fixture.h"
+#include "test/test_fixture.h"
+#include "test/unit_spirv.h"
 
+namespace spvtools {
 namespace {
+
 using spvtest::MakeInstruction;
 using ::testing::Eq;
 
@@ -45,7 +49,7 @@ TEST_P(OpEnqueueKernelGood, Sample) {
                                  GetParam().local_size_operands)));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinaryTest, OpEnqueueKernelGood,
     ::testing::ValuesIn(std::vector<KernelEnqueueCase>{
         // Provide IDs for pointer-to-local arguments for the
@@ -67,7 +71,7 @@ INSTANTIATE_TEST_CASE_P(
          {13, 14, 15, 16, 17, 18, 19, 20, 21}},
         {"%l0 %l1 %l2 %l3 %l4 %l5 %l6 %l7 %l8 %l9",
          {13, 14, 15, 16, 17, 18, 19, 20, 21, 22}},
-    }), );
+    }));
 
 // Test some bad parses of OpEnqueueKernel.  For other cases, we're relying
 // on the uniformity of the parsing algorithm.  The following two tests, ensure
@@ -104,4 +108,5 @@ TEST_F(OpKernelEnqueueBad, InvalidLastOperand) {
 // TODO(dneto): OpBuildNDRange
 // TODO(dneto): OpBuildNDRange
 
-}  // anonymous namespace
+}  // namespace
+}  // namespace spvtools

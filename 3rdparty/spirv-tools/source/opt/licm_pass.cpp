@@ -12,113 +12,128 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "opt/licm_pass.h"
-#include "opt/module.h"
-#include "opt/pass.h"
+#include "source/opt/licm_pass.h"
 
 #include <queue>
 #include <utility>
 
+#include "source/opt/module.h"
+#include "source/opt/pass.h"
+
 namespace spvtools {
 namespace opt {
 
-Pass::Status LICMPass::Process(ir::IRContext* c) {
-  InitializeProcessing(c);
-  bool modified = false;
+Pass::Status LICMPass::Process() { return ProcessIRContext(); }
 
-  if (c != nullptr) {
-    modified = ProcessIRContext();
-  }
-
-  return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
-}
-
-bool LICMPass::ProcessIRContext() {
-  bool modified = false;
-  ir::Module* module = get_module();
+Pass::Status LICMPass::ProcessIRContext() {
+  Status status = Status::SuccessWithoutChange;
+  Module* module = get_module();
 
   // Process each function in the module
-  for (ir::Function& f : *module) {
-    modified |= ProcessFunction(&f);
+  for (auto func = module->begin();
+       func != module->end() && status != Status::Failure; ++func) {
+    status = CombineStatus(status, ProcessFunction(&*func));
   }
-  return modified;
+  return status;
 }
 
-bool LICMPass::ProcessFunction(ir::Function* f) {
-  bool modified = false;
-  ir::LoopDescriptor* loop_descriptor = context()->GetLoopDescriptor(f);
+Pass::Status LICMPass::ProcessFunction(Function* f) {
+  Status status = Status::SuccessWithoutChange;
+  LoopDescriptor* loop_descriptor = context()->GetLoopDescriptor(f);
 
   // Process each loop in the function
-  for (ir::Loop& loop : *loop_descriptor) {
+  for (auto it = loop_descriptor->begin();
+       it != loop_descriptor->end() && status != Status::Failure; ++it) {
+    Loop& loop = *it;
     // Ignore nested loops, as we will process them in order in ProcessLoop
     if (loop.IsNested()) {
       continue;
     }
-    modified |= ProcessLoop(&loop, f);
+    status = CombineStatus(status, ProcessLoop(&loop, f));
   }
-  return modified;
+  return status;
 }
 
-bool LICMPass::ProcessLoop(ir::Loop* loop, ir::Function* f) {
-  bool modified = false;
+Pass::Status LICMPass::ProcessLoop(Loop* loop, Function* f) {
+  Status status = Status::SuccessWithoutChange;
 
   // Process all nested loops first
-  for (ir::Loop* nested_loop : *loop) {
-    modified |= ProcessLoop(nested_loop, f);
+  for (auto nl = loop->begin(); nl != loop->end() && status != Status::Failure;
+       ++nl) {
+    Loop* nested_loop = *nl;
+    status = CombineStatus(status, ProcessLoop(nested_loop, f));
   }
 
-  std::vector<ir::BasicBlock*> loop_bbs{};
-  modified |= AnalyseAndHoistFromBB(loop, f, loop->GetHeaderBlock(), &loop_bbs);
+  std::vector<BasicBlock*> loop_bbs{};
+  status = CombineStatus(
+      status,
+      AnalyseAndHoistFromBB(loop, f, loop->GetHeaderBlock(), &loop_bbs));
 
-  for (size_t i = 0; i < loop_bbs.size(); ++i) {
-    ir::BasicBlock* bb = loop_bbs[i];
+  for (size_t i = 0; i < loop_bbs.size() && status != Status::Failure; ++i) {
+    BasicBlock* bb = loop_bbs[i];
     // do not delete the element
-    modified |= AnalyseAndHoistFromBB(loop, f, bb, &loop_bbs);
+    status =
+        CombineStatus(status, AnalyseAndHoistFromBB(loop, f, bb, &loop_bbs));
   }
 
-  return modified;
+  return status;
 }
 
-bool LICMPass::AnalyseAndHoistFromBB(ir::Loop* loop, ir::Function* f,
-                                     ir::BasicBlock* bb,
-                                     std::vector<ir::BasicBlock*>* loop_bbs) {
+Pass::Status LICMPass::AnalyseAndHoistFromBB(
+    Loop* loop, Function* f, BasicBlock* bb,
+    std::vector<BasicBlock*>* loop_bbs) {
   bool modified = false;
-  std::function<void(ir::Instruction*)> hoist_inst =
-      [this, &loop, &modified](ir::Instruction* inst) {
+  std::function<bool(Instruction*)> hoist_inst =
+      [this, &loop, &modified](Instruction* inst) {
         if (loop->ShouldHoistInstruction(this->context(), inst)) {
-          HoistInstruction(loop, inst);
+          if (!HoistInstruction(loop, inst)) {
+            return false;
+          }
           modified = true;
         }
+        return true;
       };
 
   if (IsImmediatelyContainedInLoop(loop, f, bb)) {
-    bb->ForEachInst(hoist_inst, false);
+    if (!bb->WhileEachInst(hoist_inst, false)) {
+      return Status::Failure;
+    }
   }
 
-  opt::DominatorAnalysis* dom_analysis =
-      context()->GetDominatorAnalysis(f, *cfg());
-  opt::DominatorTree& dom_tree = dom_analysis->GetDomTree();
+  DominatorAnalysis* dom_analysis = context()->GetDominatorAnalysis(f);
+  DominatorTree& dom_tree = dom_analysis->GetDomTree();
 
-  for (opt::DominatorTreeNode* child_dom_tree_node :
-       *dom_tree.GetTreeNode(bb)) {
+  for (DominatorTreeNode* child_dom_tree_node : *dom_tree.GetTreeNode(bb)) {
     if (loop->IsInsideLoop(child_dom_tree_node->bb_)) {
       loop_bbs->push_back(child_dom_tree_node->bb_);
     }
   }
 
-  return modified;
+  return (modified ? Status::SuccessWithChange : Status::SuccessWithoutChange);
 }
 
-bool LICMPass::IsImmediatelyContainedInLoop(ir::Loop* loop, ir::Function* f,
-                                            ir::BasicBlock* bb) {
-  ir::LoopDescriptor* loop_descriptor = context()->GetLoopDescriptor(f);
+bool LICMPass::IsImmediatelyContainedInLoop(Loop* loop, Function* f,
+                                            BasicBlock* bb) {
+  LoopDescriptor* loop_descriptor = context()->GetLoopDescriptor(f);
   return loop == (*loop_descriptor)[bb->id()];
 }
 
-void LICMPass::HoistInstruction(ir::Loop* loop, ir::Instruction* inst) {
-  ir::BasicBlock* pre_header_bb = loop->GetOrCreatePreHeaderBlock();
-  inst->InsertBefore(std::move(&(*pre_header_bb->tail())));
+bool LICMPass::HoistInstruction(Loop* loop, Instruction* inst) {
+  // TODO(1841): Handle failure to create pre-header.
+  BasicBlock* pre_header_bb = loop->GetOrCreatePreHeaderBlock();
+  if (!pre_header_bb) {
+    return false;
+  }
+  Instruction* insertion_point = &*pre_header_bb->tail();
+  Instruction* previous_node = insertion_point->PreviousNode();
+  if (previous_node && (previous_node->opcode() == SpvOpLoopMerge ||
+                        previous_node->opcode() == SpvOpSelectionMerge)) {
+    insertion_point = previous_node;
+  }
+
+  inst->InsertBefore(insertion_point);
   context()->set_instr_block(inst, pre_header_bb);
+  return true;
 }
 
 }  // namespace opt

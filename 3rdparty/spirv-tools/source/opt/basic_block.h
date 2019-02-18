@@ -15,21 +15,23 @@
 // This file defines the language constructs for representing a SPIR-V
 // module in memory.
 
-#ifndef LIBSPIRV_OPT_BASIC_BLOCK_H_
-#define LIBSPIRV_OPT_BASIC_BLOCK_H_
+#ifndef SOURCE_OPT_BASIC_BLOCK_H_
+#define SOURCE_OPT_BASIC_BLOCK_H_
 
 #include <functional>
+#include <iterator>
 #include <memory>
 #include <ostream>
+#include <string>
 #include <utility>
 #include <vector>
 
-#include "instruction.h"
-#include "instruction_list.h"
-#include "iterator.h"
+#include "source/opt/instruction.h"
+#include "source/opt/instruction_list.h"
+#include "source/opt/iterator.h"
 
 namespace spvtools {
-namespace ir {
+namespace opt {
 
 class Function;
 class IRContext;
@@ -39,6 +41,9 @@ class BasicBlock {
  public:
   using iterator = InstructionList::iterator;
   using const_iterator = InstructionList::const_iterator;
+  using reverse_iterator = std::reverse_iterator<InstructionList::iterator>;
+  using const_reverse_iterator =
+      std::reverse_iterator<InstructionList::const_iterator>;
 
   // Creates a basic block with the given starting |label|.
   inline explicit BasicBlock(std::unique_ptr<Instruction> label);
@@ -49,6 +54,9 @@ class BasicBlock {
   //
   // The parent function will default to null and needs to be explicitly set by
   // the user.
+  //
+  // If the inst-to-block map in |context| is valid, then the new instructions
+  // will be inserted into the map.
   BasicBlock* Clone(IRContext*) const;
 
   // Sets the enclosing function for this basic block.
@@ -62,6 +70,9 @@ class BasicBlock {
 
   // Appends all of block's instructions (except label) to this block
   inline void AddInstructions(BasicBlock* bp);
+
+  // The pointer to the label starting this basic block.
+  std::unique_ptr<Instruction>& GetLabel() { return label_; }
 
   // The label starting this basic block.
   Instruction* GetLabelInst() { return label_.get(); }
@@ -86,6 +97,21 @@ class BasicBlock {
   const_iterator end() const { return insts_.cend(); }
   const_iterator cbegin() const { return insts_.cbegin(); }
   const_iterator cend() const { return insts_.cend(); }
+
+  reverse_iterator rbegin() { return reverse_iterator(end()); }
+  reverse_iterator rend() { return reverse_iterator(begin()); }
+  const_reverse_iterator rbegin() const {
+    return const_reverse_iterator(cend());
+  }
+  const_reverse_iterator rend() const {
+    return const_reverse_iterator(cbegin());
+  }
+  const_reverse_iterator crbegin() const {
+    return const_reverse_iterator(cend());
+  }
+  const_reverse_iterator crend() const {
+    return const_reverse_iterator(cbegin());
+  }
 
   // Returns an iterator pointing to the last instruction.  This may only
   // be used if this block has an instruction other than the OpLabel
@@ -140,14 +166,14 @@ class BasicBlock {
   void ForEachSuccessorLabel(const std::function<void(uint32_t*)>& f);
 
   // Returns true if |block| is a direct successor of |this|.
-  bool IsSuccessor(const ir::BasicBlock* block) const;
+  bool IsSuccessor(const BasicBlock* block) const;
 
   // Runs the given function |f| on the merge and continue label, if any
   void ForMergeAndContinueLabel(const std::function<void(const uint32_t)>& f);
 
   // Returns true if this basic block has any Phi instructions.
   bool HasPhiInstructions() {
-    return !WhileEachPhiInst([](ir::Instruction*) { return false; });
+    return !WhileEachPhiInst([](Instruction*) { return false; });
   }
 
   // Return true if this block is a loop header block.
@@ -178,7 +204,8 @@ class BasicBlock {
 
   // Splits this basic block into two. Returns a new basic block with label
   // |labelId| containing the instructions from |iter| onwards. Instructions
-  // prior to |iter| remain in this basic block.
+  // prior to |iter| remain in this basic block.  The new block will be added
+  // to the function immediately after the original block.
   BasicBlock* SplitBasicBlock(IRContext* context, uint32_t label_id,
                               iterator iter);
 
@@ -188,6 +215,10 @@ class BasicBlock {
   // |options| are the disassembly options. SPV_BINARY_TO_TEXT_OPTION_NO_HEADER
   // is always added to |options|.
   std::string PrettyPrint(uint32_t options = 0u) const;
+
+  // Dump this basic block on stderr.  Useful when running interactive
+  // debuggers.
+  void Dump() const;
 
  private:
   // The enclosing function.
@@ -294,7 +325,7 @@ inline void BasicBlock::ForEachPhiInst(
       run_on_debug_line_insts);
 }
 
-}  // namespace ir
+}  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_BASIC_BLOCK_H_
+#endif  // SOURCE_OPT_BASIC_BLOCK_H_

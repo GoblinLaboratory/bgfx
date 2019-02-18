@@ -15,11 +15,14 @@
 // Assembler tests for instructions in the "Type-Declaration" section of the
 // SPIR-V spec.
 
-#include "unit_spirv.h"
+#include <string>
+#include <vector>
 
 #include "gmock/gmock.h"
-#include "test_fixture.h"
+#include "test/test_fixture.h"
+#include "test/unit_spirv.h"
 
+namespace spvtools {
 namespace {
 
 using spvtest::EnumCase;
@@ -45,7 +48,7 @@ TEST_P(DimTest, AnyDim) {
 
 // clang-format off
 #define CASE(NAME) {SpvDim##NAME, #NAME}
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinaryDim, DimTest,
     ::testing::ValuesIn(std::vector<EnumCase<SpvDim>>{
         CASE(1D),
@@ -55,7 +58,7 @@ INSTANTIATE_TEST_CASE_P(
         CASE(Rect),
         CASE(Buffer),
         CASE(SubpassData),
-    }),);
+    }));
 #undef CASE
 // clang-format on
 
@@ -81,7 +84,7 @@ TEST_P(ImageFormatTest, AnyImageFormatAndNoAccessQualifier) {
 
 // clang-format off
 #define CASE(NAME) {SpvImageFormat##NAME, #NAME}
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinaryImageFormat, ImageFormatTest,
     ::testing::ValuesIn(std::vector<EnumCase<SpvImageFormat>>{
         CASE(Unknown),
@@ -124,7 +127,7 @@ INSTANTIATE_TEST_CASE_P(
         CASE(Rg8ui),
         CASE(R16ui),
         CASE(R8ui),
-    }),);
+    }));
 #undef CASE
 // clang-format on
 
@@ -150,13 +153,13 @@ TEST_P(ImageAccessQualifierTest, AnyAccessQualifier) {
 
 // clang-format off
 #define CASE(NAME) {SpvAccessQualifier##NAME, #NAME}
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     AccessQualifier, ImageAccessQualifierTest,
     ::testing::ValuesIn(std::vector<EnumCase<SpvAccessQualifier>>{
       CASE(ReadOnly),
       CASE(WriteOnly),
       CASE(ReadWrite),
-    }),);
+    }));
 // clang-format on
 #undef CASE
 
@@ -175,13 +178,13 @@ TEST_P(OpTypePipeTest, AnyAccessQualifier) {
 
 // clang-format off
 #define CASE(NAME) {SpvAccessQualifier##NAME, #NAME}
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TextToBinaryTypePipe, OpTypePipeTest,
     ::testing::ValuesIn(std::vector<EnumCase<SpvAccessQualifier>>{
                             CASE(ReadOnly),
                             CASE(WriteOnly),
                             CASE(ReadWrite),
-    }),);
+    }));
 #undef CASE
 // clang-format on
 
@@ -235,9 +238,12 @@ TEST_F(OpTypeForwardPointerTest, WrongClass) {
 
 using OpSizeOfTest = spvtest::TextToBinaryTest;
 
-TEST_F(OpSizeOfTest, OpcodeUnrecognizedInV10) {
-  EXPECT_THAT(CompileFailure("%1 = OpSizeOf %2 %3", SPV_ENV_UNIVERSAL_1_0),
-              Eq("Invalid Opcode name 'OpSizeOf'"));
+// We should be able to assemble it.  Validation checks are in another test
+// file.
+TEST_F(OpSizeOfTest, OpcodeAssemblesInV10) {
+  EXPECT_THAT(
+      CompiledInstructions("%1 = OpSizeOf %2 %3", SPV_ENV_UNIVERSAL_1_0),
+      Eq(MakeInstruction(SpvOpSizeOf, {1, 2, 3})));
 }
 
 TEST_F(OpSizeOfTest, ArgumentCount) {
@@ -283,4 +289,5 @@ TEST_F(OpSizeOfTest, ArgumentTypes) {
 // TODO(dneto): OpTypeReserveId
 // TODO(dneto): OpTypeQueue
 
-}  // anonymous namespace
+}  // namespace
+}  // namespace spvtools

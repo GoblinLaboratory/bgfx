@@ -1,11 +1,11 @@
 /*
- * Copyright 2011-2018 Branimir Karadzic. All rights reserved.
+ * Copyright 2011-2019 Branimir Karadzic. All rights reserved.
  * License: https://github.com/bkaradzic/bgfx#license-bsd-2-clause
  */
 
 #include "bgfx_p.h"
 
-#if BGFX_CONFIG_DEBUG_PIX && (BX_PLATFORM_WINDOWS || BX_PLATFORM_LINUX)
+#if BX_PLATFORM_WINDOWS || BX_PLATFORM_LINUX
 #	if BX_PLATFORM_WINDOWS
 #		include <psapi.h>
 #	endif // BX_PLATFORM_WINDOWS
@@ -154,4 +154,4 @@ namespace bgfx
 
 } // namespace bgfx
 
-#endif // BGFX_CONFIG_DEBUG_PIX && (BX_PLATFORM_WINDOWS || BX_PLATFORM_LINUX)
+#endif // BX_PLATFORM_WINDOWS || BX_PLATFORM_LINUX
